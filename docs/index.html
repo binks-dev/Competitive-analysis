@@ -20,9 +20,31 @@
           </div>
           <h1>Ad LP Finder</h1>
         </div>
-        <p class="subtitle">Meta / Google 広告ライブラリからLP URLを一括取得</p>
+        <div class="header-right">
+          <p class="subtitle">Meta / Google 広告ライブラリからLP URLを一括取得</p>
+          <button class="btn-apikey" onclick="showApiKeyModal()" title="APIキー設定">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m21 2-2 2m-7.61 7.61a5.5 5.5 0 1 1-7.78 7.78 5.5 5.5 0 0 1 7.78-7.78Zm0 0L15.5 7.5m0 0 3 3L22 7l-3-3m-3.5 3.5L19 4"/></svg>
+            <span>APIキー</span>
+          </button>
+        </div>
       </div>
     </header>
+
+    <!-- API Key Modal -->
+    <div id="apiKeyModal" class="modal-overlay hidden">
+      <div class="modal-card">
+        <h2>🔑 APIキー設定</h2>
+        <p class="modal-desc">SearchAPI.io のAPIキーを入力してください。<br>キーはブラウザのローカルストレージに保存され、コードには含まれません。</p>
+        <div class="input-group">
+          <label>API Key</label>
+          <input type="password" id="apiKeyInput" placeholder="SearchAPI.io API Key を入力...">
+        </div>
+        <div class="modal-actions">
+          <button class="btn-modal-cancel" onclick="closeApiKeyModal()">キャンセル</button>
+          <button class="btn-modal-save" onclick="saveApiKey()">保存</button>
+        </div>
+      </div>
+    </div>
 
     <!-- Search Section -->
     <main class="main">
@@ -133,7 +155,8 @@
             <thead>
               <tr>
                 <th class="col-source">媒体</th>
-                <th class="col-advertiser">広告主/会社名</th>
+                <th class="col-advertiser">広告主</th>
+                <th class="col-publisher">出稿元</th>
                 <th class="col-domain">ドメイン</th>
                 <th class="col-url">LP URL</th>
                 <th class="col-format">形式</th>
@@ -155,18 +178,56 @@
 
   <script>
     // ============================================
-    // Configuration
+    // Configuration — APIキーはlocalStorageから取得
     // ============================================
     const API_BASE = 'https://www.searchapi.io/api/v1/search';
-    const API_KEY = 'eQ9RohUuXYtB5hhdnmAq8EoS';
+    const LS_KEY = 'ad_lp_finder_api_key';
+
+    function getApiKey() {
+      return localStorage.getItem(LS_KEY) || '';
+    }
 
     let allResults = [];
     let currentFilter = 'all';
 
     // ============================================
+    // API Key Modal
+    // ============================================
+    function showApiKeyModal() {
+      document.getElementById('apiKeyInput').value = getApiKey();
+      document.getElementById('apiKeyModal').classList.remove('hidden');
+      document.getElementById('apiKeyInput').focus();
+    }
+
+    function closeApiKeyModal() {
+      document.getElementById('apiKeyModal').classList.add('hidden');
+    }
+
+    function saveApiKey() {
+      const key = document.getElementById('apiKeyInput').value.trim();
+      if (!key) {
+        alert('APIキーを入力してください');
+        return;
+      }
+      localStorage.setItem(LS_KEY, key);
+      closeApiKeyModal();
+    }
+
+    // 初回アクセス時にAPIキーがなければモーダル表示
+    if (!getApiKey()) {
+      window.addEventListener('DOMContentLoaded', () => showApiKeyModal());
+    }
+
+    // ============================================
     // Search
     // ============================================
     async function doSearch() {
+      const apiKey = getApiKey();
+      if (!apiKey) {
+        showApiKeyModal();
+        return;
+      }
+
       const keyword = document.getElementById('keyword').value.trim();
       if (!keyword) { document.getElementById('keyword').focus(); return; }
 
@@ -191,12 +252,12 @@
         let results = [];
 
         if (platforms.includes('meta')) {
-          const metaResults = await searchMeta(keyword, country, maxPages);
+          const metaResults = await searchMeta(keyword, country, maxPages, apiKey);
           results = results.concat(metaResults);
         }
 
         if (platforms.includes('google')) {
-          const googleResults = await searchGoogle(keyword, country, maxPages);
+          const googleResults = await searchGoogle(keyword, country, maxPages, apiKey);
           results = results.concat(googleResults);
         }
 
@@ -227,7 +288,7 @@
     // ============================================
     // Meta Ad Library
     // ============================================
-    async function searchMeta(keyword, country, maxPages) {
+    async function searchMeta(keyword, country, maxPages, apiKey) {
       const allAds = [];
       let nextPageToken = null;
 
@@ -239,7 +300,7 @@
           ad_type: 'all',
           media_type: 'all',
           active_status: 'active',
-          api_key: API_KEY,
+          api_key: apiKey,
         });
         if (nextPageToken) params.set('next_page_token', nextPageToken);
 
@@ -277,9 +338,13 @@
           cleanUrl = `${u.protocol}//${u.hostname}${u.pathname}`;
         } catch {}
 
+        // Meta: page_name = 広告主（Facebookページ名）, ドメイン = 出稿元
+        const pageName = ad.page_name || snapshot.page_name || '';
+
         results.push({
           source: 'Meta',
-          advertiser: ad.page_name || snapshot.page_name || '',
+          advertiser: pageName,
+          publisher: domain,
           domain,
           lp_url: linkUrl,
           lp_url_clean: cleanUrl,
@@ -299,7 +364,7 @@
     // ============================================
     // Google Ads Transparency Center
     // ============================================
-    async function searchGoogle(keyword, region, maxPages) {
+    async function searchGoogle(keyword, region, maxPages, apiKey) {
       // Step 1: advertiser search
       const searchParams = new URLSearchParams({
         engine: 'google_ads_transparency_center_advertiser_search',
@@ -307,7 +372,7 @@
         region: region,
         num_advertisers: '20',
         num_domains: '20',
-        api_key: API_KEY,
+        api_key: apiKey,
       });
 
       let searchData;
@@ -329,14 +394,16 @@
 
       // Step 2: fetch creatives per domain
       for (const domain of domainNames) {
-        const creatives = await fetchGoogleCreatives(region, maxPages, { domain });
+        const creatives = await fetchGoogleCreatives(region, maxPages, apiKey, { domain });
         for (const c of creatives) {
           const target = c.target_domain || '';
           const adv = c.advertiser || {};
           const lpUrl = target && !target.startsWith('http') ? `https://${target}` : target;
+          // Google: advertiser.name = 広告主, target_domain = 出稿元（LP先）
           allResults.push({
             source: 'Google',
             advertiser: adv.name || '',
+            publisher: target,
             domain: target,
             lp_url: lpUrl,
             lp_url_clean: lpUrl,
@@ -356,7 +423,7 @@
       for (const adv of advertisers) {
         const advId = adv.id || '';
         const advName = adv.name || '';
-        const creatives = await fetchGoogleCreatives(region, maxPages, { advertiser_id: advId });
+        const creatives = await fetchGoogleCreatives(region, maxPages, apiKey, { advertiser_id: advId });
         for (const c of creatives) {
           const target = c.target_domain || '';
           const cAdv = c.advertiser || {};
@@ -364,6 +431,7 @@
           allResults.push({
             source: 'Google',
             advertiser: cAdv.name || advName,
+            publisher: target || '(不明)',
             domain: target || '(不明)',
             lp_url: lpUrl,
             lp_url_clean: lpUrl,
@@ -389,14 +457,14 @@
       });
     }
 
-    async function fetchGoogleCreatives(region, maxPages, opts = {}) {
+    async function fetchGoogleCreatives(region, maxPages, apiKey, opts = {}) {
       const allCreatives = [];
       let nextPageToken = null;
 
       for (let page = 0; page < maxPages; page++) {
         const params = new URLSearchParams({
           engine: 'google_ads_transparency_center',
-          api_key: API_KEY,
+          api_key: apiKey,
           num: '100',
         });
         if (opts.domain) params.set('domain', opts.domain);
@@ -435,7 +503,7 @@
       tbody.innerHTML = '';
 
       if (results.length === 0) {
-        tbody.innerHTML = '<tr><td colspan="7" class="empty-msg">結果がありません</td></tr>';
+        tbody.innerHTML = '<tr><td colspan="8" class="empty-msg">結果がありません</td></tr>';
         return;
       }
 
@@ -466,6 +534,7 @@
         tr.innerHTML = `
           <td>${badge}</td>
           <td class="cell-advertiser">${escapeHtml(r.advertiser || '—')}</td>
+          <td class="cell-publisher">${escapeHtml(r.publisher || '—')}</td>
           <td class="cell-domain">${escapeHtml(r.domain || '—')}</td>
           <td class="cell-url">${urlDisplay}${detailsIcon}</td>
           <td><span class="format-tag">${escapeHtml(r.ad_format || '—')}</span></td>
@@ -507,9 +576,9 @@
 
       if (data.length === 0) return;
 
-      const headers = ['媒体', '広告主/会社名', 'ドメイン', 'LP URL', 'LP URL（クリーン）',
+      const headers = ['媒体', '広告主', '出稿元', 'ドメイン', 'LP URL', 'LP URL（クリーン）',
                        'タイトル', 'CTA', '形式', '説明', '広告開始日', '広告終了日', '詳細リンク'];
-      const fields = ['source', 'advertiser', 'domain', 'lp_url', 'lp_url_clean',
+      const fields = ['source', 'advertiser', 'publisher', 'domain', 'lp_url', 'lp_url_clean',
                        'title', 'cta_text', 'ad_format', 'description',
                        'first_shown', 'last_shown', 'details_link'];
 
