@@ -22,10 +22,20 @@
         </div>
         <div class="header-right">
           <p class="subtitle">Meta / Google 広告ライブラリからLP URLを一括取得</p>
-          <button class="btn-apikey" onclick="showApiKeyModal()" title="APIキー設定">
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m21 2-2 2m-7.61 7.61a5.5 5.5 0 1 1-7.78 7.78 5.5 5.5 0 0 1 7.78-7.78Zm0 0L15.5 7.5m0 0 3 3L22 7l-3-3m-3.5 3.5L19 4"/></svg>
-            <span>APIキー</span>
-          </button>
+          <div class="header-buttons">
+            <button class="btn-header" onclick="showHistoryPanel()" title="検索履歴">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 8v4l3 3"/><circle cx="12" cy="12" r="10"/></svg>
+              <span>履歴</span>
+            </button>
+            <button class="btn-header" onclick="showSpreadsheetModal()" title="スプレッドシート設定">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 9h18M3 15h18M9 3v18"/></svg>
+              <span>スプシ設定</span>
+            </button>
+            <button class="btn-header" onclick="showApiKeyModal()" title="APIキー設定">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m21 2-2 2m-7.61 7.61a5.5 5.5 0 1 1-7.78 7.78 5.5 5.5 0 0 1 7.78-7.78Zm0 0L15.5 7.5m0 0 3 3L22 7l-3-3m-3.5 3.5L19 4"/></svg>
+              <span>APIキー</span>
+            </button>
+          </div>
         </div>
       </div>
     </header>
@@ -42,6 +52,38 @@
         <div class="modal-actions">
           <button class="btn-modal-cancel" onclick="closeApiKeyModal()">キャンセル</button>
           <button class="btn-modal-save" onclick="saveApiKey()">保存</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Spreadsheet Modal -->
+    <div id="spreadsheetModal" class="modal-overlay hidden">
+      <div class="modal-card">
+        <h2>📊 スプレッドシート設定</h2>
+        <p class="modal-desc">Google Apps Script のWebアプリURLを入力してください。<br>設定方法は <a href="https://github.com/binks-dev/Competitive-analysis#スプレッドシート連携の設定" target="_blank">README</a> を参照してください。</p>
+        <div class="input-group">
+          <label>GAS WebアプリURL</label>
+          <input type="text" id="gasUrlInput" placeholder="https://script.google.com/macros/s/...">
+        </div>
+        <div class="modal-actions">
+          <button class="btn-modal-cancel" onclick="closeSpreadsheetModal()">キャンセル</button>
+          <button class="btn-modal-save" onclick="saveGasUrl()">保存</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- History Panel -->
+    <div id="historyPanel" class="modal-overlay hidden" onclick="closeHistoryIfBg(event)">
+      <div class="history-card">
+        <div class="history-header">
+          <h2>📋 検索履歴</h2>
+          <div class="history-actions">
+            <button class="btn-modal-cancel" onclick="clearHistory()">全削除</button>
+            <button class="btn-modal-cancel" onclick="closeHistoryPanel()">✕</button>
+          </div>
+        </div>
+        <div id="historyBody" class="history-body">
+          <p class="text-muted">履歴がありません</p>
         </div>
       </div>
     </div>
@@ -103,6 +145,12 @@
         </div>
       </div>
 
+      <!-- Duplicate Warning -->
+      <div id="dupWarning" class="warning-card hidden">
+        <p id="dupWarningText"></p>
+        <button class="btn-modal-cancel" onclick="dismissDupWarning()">検索を続行</button>
+      </div>
+
       <!-- Loading -->
       <div id="loading" class="loading hidden">
         <div class="loading-spinner"></div>
@@ -143,10 +191,16 @@
             <button class="filter-btn" data-filter="Meta" onclick="filterResults('Meta', this)">Meta</button>
             <button class="filter-btn" data-filter="Google" onclick="filterResults('Google', this)">Google</button>
           </div>
-          <button class="btn-export" onclick="exportCSV()">
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
-            CSV出力
-          </button>
+          <div class="export-buttons">
+            <button class="btn-export" onclick="sendToSpreadsheet()" id="btnSpreadsheet">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 9h18M3 15h18M9 3v18"/></svg>
+              スプシに送信
+            </button>
+            <button class="btn-export" onclick="exportCSV()">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+              CSV出力
+            </button>
+          </div>
         </div>
 
         <!-- Table -->
@@ -168,6 +222,9 @@
           </table>
         </div>
       </div>
+
+      <!-- Toast -->
+      <div id="toast" class="toast hidden"></div>
     </main>
 
     <!-- Footer -->
@@ -178,17 +235,20 @@
 
   <script>
     // ============================================
-    // Configuration — APIキーはlocalStorageから取得
+    // Configuration
     // ============================================
     const API_BASE = 'https://www.searchapi.io/api/v1/search';
     const LS_KEY = 'ad_lp_finder_api_key';
+    const LS_GAS_URL = 'ad_lp_finder_gas_url';
+    const LS_HISTORY = 'ad_lp_finder_history';
 
-    function getApiKey() {
-      return localStorage.getItem(LS_KEY) || '';
-    }
+    function getApiKey() { return localStorage.getItem(LS_KEY) || ''; }
+    function getGasUrl() { return localStorage.getItem(LS_GAS_URL) || ''; }
 
     let allResults = [];
     let currentFilter = 'all';
+    let lastSearchKeyword = '';
+    let skipDupCheck = false;
 
     // ============================================
     // API Key Modal
@@ -198,24 +258,103 @@
       document.getElementById('apiKeyModal').classList.remove('hidden');
       document.getElementById('apiKeyInput').focus();
     }
-
-    function closeApiKeyModal() {
-      document.getElementById('apiKeyModal').classList.add('hidden');
-    }
-
+    function closeApiKeyModal() { document.getElementById('apiKeyModal').classList.add('hidden'); }
     function saveApiKey() {
       const key = document.getElementById('apiKeyInput').value.trim();
-      if (!key) {
-        alert('APIキーを入力してください');
-        return;
-      }
+      if (!key) { alert('APIキーを入力してください'); return; }
       localStorage.setItem(LS_KEY, key);
       closeApiKeyModal();
+      showToast('APIキーを保存しました');
+    }
+    if (!getApiKey()) { window.addEventListener('DOMContentLoaded', () => showApiKeyModal()); }
+
+    // ============================================
+    // Spreadsheet Modal
+    // ============================================
+    function showSpreadsheetModal() {
+      document.getElementById('gasUrlInput').value = getGasUrl();
+      document.getElementById('spreadsheetModal').classList.remove('hidden');
+      document.getElementById('gasUrlInput').focus();
+    }
+    function closeSpreadsheetModal() { document.getElementById('spreadsheetModal').classList.add('hidden'); }
+    function saveGasUrl() {
+      const url = document.getElementById('gasUrlInput').value.trim();
+      if (url && !url.startsWith('https://script.google.com/')) {
+        alert('Google Apps Script のURLを入力してください');
+        return;
+      }
+      localStorage.setItem(LS_GAS_URL, url);
+      closeSpreadsheetModal();
+      showToast(url ? 'スプシ設定を保存しました' : 'スプシ設定をクリアしました');
     }
 
-    // 初回アクセス時にAPIキーがなければモーダル表示
-    if (!getApiKey()) {
-      window.addEventListener('DOMContentLoaded', () => showApiKeyModal());
+    // ============================================
+    // Search History
+    // ============================================
+    function getHistory() {
+      try { return JSON.parse(localStorage.getItem(LS_HISTORY) || '[]'); }
+      catch { return []; }
+    }
+    function saveHistory(entry) {
+      const history = getHistory();
+      history.unshift(entry);
+      // 最大100件保持
+      if (history.length > 100) history.length = 100;
+      localStorage.setItem(LS_HISTORY, JSON.stringify(history));
+    }
+    function clearHistory() {
+      if (!confirm('検索履歴をすべて削除しますか？')) return;
+      localStorage.setItem(LS_HISTORY, '[]');
+      renderHistory();
+      showToast('履歴を削除しました');
+    }
+    function showHistoryPanel() {
+      renderHistory();
+      document.getElementById('historyPanel').classList.remove('hidden');
+    }
+    function closeHistoryPanel() { document.getElementById('historyPanel').classList.add('hidden'); }
+    function closeHistoryIfBg(e) { if (e.target === e.currentTarget) closeHistoryPanel(); }
+
+    function renderHistory() {
+      const body = document.getElementById('historyBody');
+      const history = getHistory();
+      if (history.length === 0) {
+        body.innerHTML = '<p class="text-muted" style="padding:20px;text-align:center;">履歴がありません</p>';
+        return;
+      }
+      let html = '<table class="history-table"><thead><tr><th>日時</th><th>キーワード</th><th>媒体</th><th>件数</th><th>国</th></tr></thead><tbody>';
+      history.forEach(h => {
+        const dt = new Date(h.searchedAt);
+        const dtStr = dt.toLocaleDateString('ja-JP') + ' ' + dt.toLocaleTimeString('ja-JP', { hour: '2-digit', minute: '2-digit' });
+        const platforms = (h.platforms || []).map(p => p === 'meta' ? 'Meta' : 'Google').join(', ');
+        html += `<tr>
+          <td>${escapeHtml(dtStr)}</td>
+          <td><strong>${escapeHtml(h.keyword)}</strong></td>
+          <td>${escapeHtml(platforms)}</td>
+          <td>${h.resultCount ?? '—'}</td>
+          <td>${escapeHtml(h.country || '—')}</td>
+        </tr>`;
+      });
+      html += '</tbody></table>';
+      body.innerHTML = html;
+    }
+
+    function checkDuplicate(keyword, platforms) {
+      const history = getHistory();
+      const match = history.find(h =>
+        h.keyword === keyword &&
+        JSON.stringify(h.platforms.sort()) === JSON.stringify([...platforms].sort())
+      );
+      return match;
+    }
+
+    // ============================================
+    // Duplicate Warning
+    // ============================================
+    function dismissDupWarning() {
+      document.getElementById('dupWarning').classList.add('hidden');
+      skipDupCheck = true;
+      doSearch();
     }
 
     // ============================================
@@ -223,10 +362,7 @@
     // ============================================
     async function doSearch() {
       const apiKey = getApiKey();
-      if (!apiKey) {
-        showApiKeyModal();
-        return;
-      }
+      if (!apiKey) { showApiKeyModal(); return; }
 
       const keyword = document.getElementById('keyword').value.trim();
       if (!keyword) { document.getElementById('keyword').focus(); return; }
@@ -234,8 +370,22 @@
       const platforms = [];
       if (document.getElementById('platformMeta').checked) platforms.push('meta');
       if (document.getElementById('platformGoogle').checked) platforms.push('google');
-
       if (platforms.length === 0) { showError('Meta または Google を選択してください'); return; }
+
+      // 重複チェック
+      if (!skipDupCheck) {
+        const dup = checkDuplicate(keyword, platforms);
+        if (dup) {
+          const dt = new Date(dup.searchedAt);
+          const dtStr = dt.toLocaleDateString('ja-JP') + ' ' + dt.toLocaleTimeString('ja-JP', { hour: '2-digit', minute: '2-digit' });
+          document.getElementById('dupWarningText').textContent =
+            `⚠️「${keyword}」は ${dtStr} に同じ媒体で検索済みです（${dup.resultCount}件）。再検索するとクレジットを消費します。`;
+          document.getElementById('dupWarning').classList.remove('hidden');
+          return;
+        }
+      }
+      skipDupCheck = false;
+      document.getElementById('dupWarning').classList.add('hidden');
 
       const country = document.getElementById('country').value;
       const maxPages = parseInt(document.getElementById('maxPages').value);
@@ -250,30 +400,30 @@
 
       try {
         let results = [];
-
         if (platforms.includes('meta')) {
-          const metaResults = await searchMeta(keyword, country, maxPages, apiKey);
-          results = results.concat(metaResults);
+          results = results.concat(await searchMeta(keyword, country, maxPages, apiKey));
         }
-
         if (platforms.includes('google')) {
-          const googleResults = await searchGoogle(keyword, country, maxPages, apiKey);
-          results = results.concat(googleResults);
+          results = results.concat(await searchGoogle(keyword, country, maxPages, apiKey));
         }
 
         allResults = results;
+        lastSearchKeyword = keyword;
 
-        // Domain counts
-        const domainCounts = {};
-        results.forEach(r => {
-          if (r.domain) domainCounts[r.domain] = (domainCounts[r.domain] || 0) + 1;
+        // 検索履歴に保存
+        saveHistory({
+          keyword, platforms, country,
+          resultCount: results.length,
+          searchedAt: new Date().toISOString(),
         });
+
+        const domainCounts = {};
+        results.forEach(r => { if (r.domain) domainCounts[r.domain] = (domainCounts[r.domain] || 0) + 1; });
 
         renderResults(results);
         updateStats({ results, total: results.length, domain_count: Object.keys(domainCounts).length });
         document.getElementById('results').classList.remove('hidden');
 
-        // Reset filter
         currentFilter = 'all';
         document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
         document.querySelector('[data-filter="all"]').classList.add('active');
@@ -294,70 +444,42 @@
 
       for (let page = 0; page < maxPages; page++) {
         const params = new URLSearchParams({
-          engine: 'meta_ad_library',
-          q: keyword,
-          country: country,
-          ad_type: 'all',
-          media_type: 'all',
-          active_status: 'active',
-          api_key: apiKey,
+          engine: 'meta_ad_library', q: keyword, country, ad_type: 'all',
+          media_type: 'all', active_status: 'active', api_key: apiKey,
         });
         if (nextPageToken) params.set('next_page_token', nextPageToken);
-
         try {
           const resp = await fetch(`${API_BASE}?${params}`);
           if (!resp.ok) throw new Error(`Meta API error: ${resp.status}`);
           const data = await resp.json();
-
           const ads = data.ads || [];
           if (ads.length === 0) break;
-
           allAds.push(...ads);
           nextPageToken = data.next_page_token;
           if (!nextPageToken) break;
           if (page < maxPages - 1) await sleep(1000);
-        } catch (e) {
-          console.error('Meta search error:', e);
-          break;
-        }
+        } catch (e) { console.error('Meta search error:', e); break; }
       }
 
       const seenUrls = new Set();
       const results = [];
-
       for (const ad of allAds) {
         const snapshot = ad.snapshot || {};
         const linkUrl = snapshot.link_url || '';
         if (!linkUrl || seenUrls.has(linkUrl)) continue;
         seenUrls.add(linkUrl);
-
         let domain = '', cleanUrl = linkUrl;
-        try {
-          const u = new URL(linkUrl);
-          domain = u.hostname;
-          cleanUrl = `${u.protocol}//${u.hostname}${u.pathname}`;
-        } catch {}
-
-        // Meta: page_name = 広告主（Facebookページ名）, ドメイン = 出稿元
+        try { const u = new URL(linkUrl); domain = u.hostname; cleanUrl = `${u.protocol}//${u.hostname}${u.pathname}`; } catch {}
         const pageName = ad.page_name || snapshot.page_name || '';
-
         results.push({
-          source: 'Meta',
-          advertiser: pageName,
-          publisher: domain,
-          domain,
-          lp_url: linkUrl,
-          lp_url_clean: cleanUrl,
-          title: snapshot.title || '',
-          cta_text: snapshot.cta_text || '',
-          ad_format: snapshot.display_format || '',
-          description: snapshot.link_description || '',
-          first_shown: ad.ad_delivery_start_time || '',
-          last_shown: ad.ad_delivery_stop_time || '',
+          source: 'Meta', advertiser: pageName, publisher: domain, domain,
+          lp_url: linkUrl, lp_url_clean: cleanUrl,
+          title: snapshot.title || '', cta_text: snapshot.cta_text || '',
+          ad_format: snapshot.display_format || '', description: snapshot.link_description || '',
+          first_shown: ad.ad_delivery_start_time || '', last_shown: ad.ad_delivery_stop_time || '',
           details_link: '',
         });
       }
-
       return results;
     }
 
@@ -365,133 +487,86 @@
     // Google Ads Transparency Center
     // ============================================
     async function searchGoogle(keyword, region, maxPages, apiKey) {
-      // Step 1: advertiser search
       const searchParams = new URLSearchParams({
         engine: 'google_ads_transparency_center_advertiser_search',
-        q: keyword,
-        region: region,
-        num_advertisers: '20',
-        num_domains: '20',
-        api_key: apiKey,
+        q: keyword, region, num_advertisers: '20', num_domains: '20', api_key: apiKey,
       });
-
       let searchData;
       try {
         const resp = await fetch(`${API_BASE}?${searchParams}`);
         if (!resp.ok) throw new Error(`Google search API error: ${resp.status}`);
         searchData = await resp.json();
-      } catch (e) {
-        console.error('Google advertiser search error:', e);
-        return [];
-      }
+      } catch (e) { console.error('Google advertiser search error:', e); return []; }
 
-      const domainNames = (searchData.domains || [])
-        .map(d => typeof d === 'object' ? (d.name || '') : String(d))
-        .filter(Boolean);
-
+      const domainNames = (searchData.domains || []).map(d => typeof d === 'object' ? (d.name || '') : String(d)).filter(Boolean);
       const advertisers = searchData.advertisers || [];
       const allResults = [];
 
-      // Step 2: fetch creatives per domain
       for (const domain of domainNames) {
         const creatives = await fetchGoogleCreatives(region, maxPages, apiKey, { domain });
         for (const c of creatives) {
           const target = c.target_domain || '';
           const adv = c.advertiser || {};
           const lpUrl = target && !target.startsWith('http') ? `https://${target}` : target;
-          // Google: advertiser.name = 広告主, target_domain = 出稿元（LP先）
           allResults.push({
-            source: 'Google',
-            advertiser: adv.name || '',
-            publisher: target,
-            domain: target,
-            lp_url: lpUrl,
-            lp_url_clean: lpUrl,
-            title: '',
-            cta_text: '',
-            ad_format: c.format || '',
-            description: '',
-            first_shown: c.first_shown_datetime || '',
-            last_shown: c.last_shown_datetime || '',
+            source: 'Google', advertiser: adv.name || '', publisher: target, domain: target,
+            lp_url: lpUrl, lp_url_clean: lpUrl, title: '', cta_text: '',
+            ad_format: c.format || '', description: '',
+            first_shown: c.first_shown_datetime || '', last_shown: c.last_shown_datetime || '',
             details_link: c.details_link || '',
           });
         }
         await sleep(500);
       }
 
-      // Step 3: fetch creatives per advertiser
       for (const adv of advertisers) {
-        const advId = adv.id || '';
-        const advName = adv.name || '';
+        const advId = adv.id || '', advName = adv.name || '';
         const creatives = await fetchGoogleCreatives(region, maxPages, apiKey, { advertiser_id: advId });
         for (const c of creatives) {
           const target = c.target_domain || '';
           const cAdv = c.advertiser || {};
           const lpUrl = target && !target.startsWith('http') ? `https://${target}` : (target || '');
           allResults.push({
-            source: 'Google',
-            advertiser: cAdv.name || advName,
-            publisher: target || '(不明)',
-            domain: target || '(不明)',
-            lp_url: lpUrl,
-            lp_url_clean: lpUrl,
-            title: '',
-            cta_text: '',
-            ad_format: c.format || '',
-            description: '',
-            first_shown: c.first_shown_datetime || '',
-            last_shown: c.last_shown_datetime || '',
+            source: 'Google', advertiser: cAdv.name || advName, publisher: target || '(不明)',
+            domain: target || '(不明)', lp_url: lpUrl, lp_url_clean: lpUrl, title: '', cta_text: '',
+            ad_format: c.format || '', description: '',
+            first_shown: c.first_shown_datetime || '', last_shown: c.last_shown_datetime || '',
             details_link: c.details_link || '',
           });
         }
         await sleep(500);
       }
 
-      // Deduplicate by domain
       const seen = new Set();
       return allResults.filter(r => {
         const key = r.domain;
         if (!key || seen.has(key)) return !!key ? false : true;
-        seen.add(key);
-        return true;
+        seen.add(key); return true;
       });
     }
 
     async function fetchGoogleCreatives(region, maxPages, apiKey, opts = {}) {
       const allCreatives = [];
       let nextPageToken = null;
-
       for (let page = 0; page < maxPages; page++) {
-        const params = new URLSearchParams({
-          engine: 'google_ads_transparency_center',
-          api_key: apiKey,
-          num: '100',
-        });
+        const params = new URLSearchParams({ engine: 'google_ads_transparency_center', api_key: apiKey, num: '100' });
         if (opts.domain) params.set('domain', opts.domain);
         if (opts.advertiser_id) params.set('advertiser_id', opts.advertiser_id);
         if (region) params.set('region', region);
         if (nextPageToken) params.set('next_page_token', nextPageToken);
-
         try {
           const resp = await fetch(`${API_BASE}?${params}`);
           if (!resp.ok) throw new Error(`Google creatives API error: ${resp.status}`);
           const data = await resp.json();
-
           const creatives = data.ad_creatives || [];
           if (creatives.length === 0) break;
-
           allCreatives.push(...creatives);
-
           const pagination = data.pagination || {};
           nextPageToken = pagination.next_page_token;
           if (!nextPageToken) break;
           if (page < maxPages - 1) await sleep(1000);
-        } catch (e) {
-          console.error('Google creatives error:', e);
-          break;
-        }
+        } catch (e) { console.error('Google creatives error:', e); break; }
       }
-
       return allCreatives;
     }
 
@@ -501,36 +576,27 @@
     function renderResults(results) {
       const tbody = document.getElementById('resultBody');
       tbody.innerHTML = '';
-
       if (results.length === 0) {
         tbody.innerHTML = '<tr><td colspan="8" class="empty-msg">結果がありません</td></tr>';
         return;
       }
-
       results.forEach(r => {
         const tr = document.createElement('tr');
         const badge = r.source === 'Meta'
           ? '<span class="badge badge-meta">Meta</span>'
           : '<span class="badge badge-google">Google</span>';
-
         const urlDisplay = r.lp_url
           ? `<a href="${escapeHtml(r.lp_url)}" target="_blank" rel="noopener" title="${escapeHtml(r.lp_url)}">${escapeHtml(truncate(r.lp_url_clean || r.lp_url, 50))}</a>`
           : '<span class="text-muted">—</span>';
-
         const titleCta = [r.title, r.cta_text].filter(Boolean).join(' / ') || '—';
-
         let detailsIcon = '';
-        if (r.details_link) {
-          detailsIcon = ` <a href="${escapeHtml(r.details_link)}" target="_blank" class="details-link" title="広告詳細">↗</a>`;
-        }
-
+        if (r.details_link) detailsIcon = ` <a href="${escapeHtml(r.details_link)}" target="_blank" class="details-link" title="広告詳細">↗</a>`;
         let periodDisplay = '—';
         if (r.first_shown || r.last_shown) {
           const start = r.first_shown ? formatDate(r.first_shown) : '不明';
           const end = r.last_shown ? formatDate(r.last_shown) : '配信中';
           periodDisplay = `${start} ～ ${end}`;
         }
-
         tr.innerHTML = `
           <td>${badge}</td>
           <td class="cell-advertiser">${escapeHtml(r.advertiser || '—')}</td>
@@ -548,68 +614,115 @@
     function updateStats(data) {
       document.getElementById('statTotal').textContent = data.total || 0;
       document.getElementById('statDomains').textContent = data.domain_count || 0;
-
-      const metaCount = (data.results || []).filter(r => r.source === 'Meta').length;
-      const googleCount = (data.results || []).filter(r => r.source === 'Google').length;
-      document.getElementById('statMeta').textContent = metaCount;
-      document.getElementById('statGoogle').textContent = googleCount;
+      document.getElementById('statMeta').textContent = (data.results || []).filter(r => r.source === 'Meta').length;
+      document.getElementById('statGoogle').textContent = (data.results || []).filter(r => r.source === 'Google').length;
     }
 
     function filterResults(filter, btn) {
       currentFilter = filter;
       document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
       btn.classList.add('active');
-
-      const filtered = filter === 'all'
-        ? allResults
-        : allResults.filter(r => r.source === filter);
+      const filtered = filter === 'all' ? allResults : allResults.filter(r => r.source === filter);
       renderResults(filtered);
+    }
+
+    // ============================================
+    // Spreadsheet Export
+    // ============================================
+    async function sendToSpreadsheet() {
+      const gasUrl = getGasUrl();
+      if (!gasUrl) { showSpreadsheetModal(); return; }
+
+      const data = currentFilter === 'all' ? allResults : allResults.filter(r => r.source === currentFilter);
+      if (data.length === 0) { showToast('送信するデータがありません', true); return; }
+
+      const btn = document.getElementById('btnSpreadsheet');
+      btn.disabled = true;
+      btn.textContent = '送信中...';
+
+      const keyword = document.getElementById('keyword').value.trim() || '';
+      const now = new Date().toLocaleString('ja-JP');
+
+      try {
+        const payload = {
+          keyword,
+          fetchedAt: now,
+          results: data.map(r => ({
+            fetchedAt: now,
+            keyword,
+            source: r.source,
+            advertiser: r.advertiser,
+            publisher: r.publisher,
+            domain: r.domain,
+            lp_url: r.lp_url,
+            lp_url_clean: r.lp_url_clean,
+            title: r.title,
+            cta_text: r.cta_text,
+            ad_format: r.ad_format,
+            description: r.description,
+            first_shown: r.first_shown,
+            last_shown: r.last_shown,
+            details_link: r.details_link,
+          })),
+        };
+
+        const resp = await fetch(gasUrl, {
+          method: 'POST',
+          mode: 'no-cors',
+          headers: { 'Content-Type': 'text/plain' },
+          body: JSON.stringify(payload),
+        });
+
+        showToast(`✅ ${data.length}件をスプレッドシートに送信しました`);
+      } catch (err) {
+        showToast('❌ 送信エラー: ' + err.message, true);
+      } finally {
+        btn.disabled = false;
+        btn.innerHTML = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 9h18M3 15h18M9 3v18"/></svg> スプシに送信';
+      }
     }
 
     // ============================================
     // CSV Export (Client-Side)
     // ============================================
     function exportCSV() {
-      const data = currentFilter === 'all'
-        ? allResults
-        : allResults.filter(r => r.source === currentFilter);
-
+      const data = currentFilter === 'all' ? allResults : allResults.filter(r => r.source === currentFilter);
       if (data.length === 0) return;
 
-      const headers = ['媒体', '広告主', '出稿元', 'ドメイン', 'LP URL', 'LP URL（クリーン）',
+      const now = new Date().toLocaleString('ja-JP');
+      const headers = ['取得日時', '検索キーワード', '媒体', '広告主', '出稿元', 'ドメイン', 'LP URL', 'LP URL（クリーン）',
                        'タイトル', 'CTA', '形式', '説明', '広告開始日', '広告終了日', '詳細リンク'];
-      const fields = ['source', 'advertiser', 'publisher', 'domain', 'lp_url', 'lp_url_clean',
-                       'title', 'cta_text', 'ad_format', 'description',
-                       'first_shown', 'last_shown', 'details_link'];
 
-      // BOM + CSV body
       let csv = '\uFEFF';
       csv += headers.map(h => `"${h}"`).join(',') + '\n';
       data.forEach(row => {
-        csv += fields.map(f => {
-          const val = (row[f] || '').toString().replace(/"/g, '""');
-          return `"${val}"`;
-        }).join(',') + '\n';
+        const vals = [now, lastSearchKeyword, row.source, row.advertiser, row.publisher, row.domain,
+          row.lp_url, row.lp_url_clean, row.title, row.cta_text, row.ad_format,
+          row.description, row.first_shown, row.last_shown, row.details_link];
+        csv += vals.map(v => `"${(v || '').toString().replace(/"/g, '""')}"`).join(',') + '\n';
       });
 
       const blob = new Blob([csv], { type: 'text/csv;charset=utf-8' });
       const url = URL.createObjectURL(blob);
-
       const keyword = document.getElementById('keyword').value.trim() || 'lp_urls';
       const filterLabel = currentFilter !== 'all' ? `_${currentFilter}` : '';
       const dateStr = new Date().toISOString().slice(0, 10);
-      const safeKeyword = keyword.replace(/[ /]/g, '_');
-      const filename = `${safeKeyword}${filterLabel}_${dateStr}.csv`;
-
+      const filename = `${keyword.replace(/[ /]/g, '_')}${filterLabel}_${dateStr}.csv`;
       const a = document.createElement('a');
-      a.href = url;
-      a.download = filename;
-      document.body.appendChild(a);
-      a.click();
-      setTimeout(() => {
-        document.body.removeChild(a);
-        URL.revokeObjectURL(url);
-      }, 100);
+      a.href = url; a.download = filename;
+      document.body.appendChild(a); a.click();
+      setTimeout(() => { document.body.removeChild(a); URL.revokeObjectURL(url); }, 100);
+    }
+
+    // ============================================
+    // Toast Notification
+    // ============================================
+    function showToast(msg, isError = false) {
+      const toast = document.getElementById('toast');
+      toast.textContent = msg;
+      toast.className = 'toast' + (isError ? ' toast-error' : '');
+      toast.classList.remove('hidden');
+      setTimeout(() => toast.classList.add('hidden'), 3500);
     }
 
     // ============================================
@@ -619,36 +732,16 @@
       document.getElementById('errorText').textContent = msg;
       document.getElementById('error').classList.remove('hidden');
     }
-
-    function escapeHtml(str) {
-      const d = document.createElement('div');
-      d.textContent = str;
-      return d.innerHTML;
-    }
-
-    function truncate(str, len) {
-      return str && str.length > len ? str.slice(0, len) + '…' : (str || '');
-    }
-
+    function escapeHtml(str) { const d = document.createElement('div'); d.textContent = str; return d.innerHTML; }
+    function truncate(str, len) { return str && str.length > len ? str.slice(0, len) + '…' : (str || ''); }
     function formatDate(dateStr) {
       if (!dateStr) return '';
-      try {
-        const d = new Date(dateStr);
-        if (isNaN(d.getTime())) return dateStr.slice(0, 10);
-        return d.toLocaleDateString('ja-JP', { year: 'numeric', month: '2-digit', day: '2-digit' });
-      } catch {
-        return dateStr.slice(0, 10);
-      }
+      try { const d = new Date(dateStr); if (isNaN(d.getTime())) return dateStr.slice(0, 10); return d.toLocaleDateString('ja-JP', { year: 'numeric', month: '2-digit', day: '2-digit' }); }
+      catch { return dateStr.slice(0, 10); }
     }
+    function sleep(ms) { return new Promise(resolve => setTimeout(resolve, ms)); }
 
-    function sleep(ms) {
-      return new Promise(resolve => setTimeout(resolve, ms));
-    }
-
-    // Enter key to search
-    document.getElementById('keyword').addEventListener('keydown', e => {
-      if (e.key === 'Enter') doSearch();
-    });
+    document.getElementById('keyword').addEventListener('keydown', e => { if (e.key === 'Enter') doSearch(); });
   </script>
 </body>
 </html>
