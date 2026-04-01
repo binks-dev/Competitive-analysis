@@ -132,7 +132,26 @@ a:hover { text-decoration: underline; }
   background: var(--bg-card);
   cursor: pointer;
   transition: all 0.2s;
+  text-decoration: none;
 }
+a.btn-spreadsheet-link {
+  border-color: rgba(52, 168, 83, 0.4);
+  color: #6ee7b7;
+}
+a.btn-spreadsheet-link:hover {
+  border-color: #34a853;
+  background: rgba(52, 168, 83, 0.1);
+  text-decoration: none;
+}
+
+/* Sheet Status */
+.sheet-status {
+  font-size: 12px;
+  transition: all 0.3s;
+}
+.sheet-status.sending { color: var(--text-secondary); }
+.sheet-status.success { color: #6ee7b7; }
+.sheet-status.error { color: #fca5a5; }
 
 /* ---- API Key Modal ---- */
 .modal-overlay {

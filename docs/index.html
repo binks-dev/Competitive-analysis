@@ -23,14 +23,10 @@
         <div class="header-right">
           <p class="subtitle">Meta / Google 広告ライブラリからLP URLを一括取得</p>
           <div class="header-buttons">
-            <button class="btn-header" onclick="showHistoryPanel()" title="検索履歴">
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 8v4l3 3"/><circle cx="12" cy="12" r="10"/></svg>
-              <span>履歴</span>
-            </button>
-            <button class="btn-header" onclick="showSpreadsheetModal()" title="スプレッドシート設定">
+            <a href="https://docs.google.com/spreadsheets/d/1x4c9sWAGG-_OP1LvQpn_UhN8JPbUGoTU0DPVQB2N5XY/edit" target="_blank" class="btn-header btn-spreadsheet-link">
               <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 9h18M3 15h18M9 3v18"/></svg>
-              <span>スプシ設定</span>
-            </button>
+              <span>スプレッドシートを開く</span>
+            </a>
             <button class="btn-header" onclick="showApiKeyModal()" title="APIキー設定">
               <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m21 2-2 2m-7.61 7.61a5.5 5.5 0 1 1-7.78 7.78 5.5 5.5 0 0 1 7.78-7.78Zm0 0L15.5 7.5m0 0 3 3L22 7l-3-3m-3.5 3.5L19 4"/></svg>
               <span>APIキー</span>
@@ -52,38 +48,6 @@
         <div class="modal-actions">
           <button class="btn-modal-cancel" onclick="closeApiKeyModal()">キャンセル</button>
           <button class="btn-modal-save" onclick="saveApiKey()">保存</button>
-        </div>
-      </div>
-    </div>
-
-    <!-- Spreadsheet Modal -->
-    <div id="spreadsheetModal" class="modal-overlay hidden">
-      <div class="modal-card">
-        <h2>📊 スプレッドシート設定</h2>
-        <p class="modal-desc">Google Apps Script のWebアプリURLを入力してください。<br>設定方法は <a href="https://github.com/binks-dev/Competitive-analysis#スプレッドシート連携の設定" target="_blank">README</a> を参照してください。</p>
-        <div class="input-group">
-          <label>GAS WebアプリURL</label>
-          <input type="text" id="gasUrlInput" placeholder="https://script.google.com/macros/s/...">
-        </div>
-        <div class="modal-actions">
-          <button class="btn-modal-cancel" onclick="closeSpreadsheetModal()">キャンセル</button>
-          <button class="btn-modal-save" onclick="saveGasUrl()">保存</button>
-        </div>
-      </div>
-    </div>
-
-    <!-- History Panel -->
-    <div id="historyPanel" class="modal-overlay hidden" onclick="closeHistoryIfBg(event)">
-      <div class="history-card">
-        <div class="history-header">
-          <h2>📋 検索履歴</h2>
-          <div class="history-actions">
-            <button class="btn-modal-cancel" onclick="clearHistory()">全削除</button>
-            <button class="btn-modal-cancel" onclick="closeHistoryPanel()">✕</button>
-          </div>
-        </div>
-        <div id="historyBody" class="history-body">
-          <p class="text-muted">履歴がありません</p>
         </div>
       </div>
     </div>
@@ -145,12 +109,6 @@
         </div>
       </div>
 
-      <!-- Duplicate Warning -->
-      <div id="dupWarning" class="warning-card hidden">
-        <p id="dupWarningText"></p>
-        <button class="btn-modal-cancel" onclick="dismissDupWarning()">検索を続行</button>
-      </div>
-
       <!-- Loading -->
       <div id="loading" class="loading hidden">
         <div class="loading-spinner"></div>
@@ -192,10 +150,7 @@
             <button class="filter-btn" data-filter="Google" onclick="filterResults('Google', this)">Google</button>
           </div>
           <div class="export-buttons">
-            <button class="btn-export" onclick="sendToSpreadsheet()" id="btnSpreadsheet">
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 9h18M3 15h18M9 3v18"/></svg>
-              スプシに送信
-            </button>
+            <span id="sheetStatus" class="sheet-status"></span>
             <button class="btn-export" onclick="exportCSV()">
               <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
               CSV出力
@@ -239,16 +194,13 @@
     // ============================================
     const API_BASE = 'https://www.searchapi.io/api/v1/search';
     const LS_KEY = 'ad_lp_finder_api_key';
-    const LS_GAS_URL = 'ad_lp_finder_gas_url';
-    const LS_HISTORY = 'ad_lp_finder_history';
+    const GAS_URL = 'https://script.google.com/macros/s/AKfycbz4Oc4yLYaRt8sepp59hxAos9UnuYFgijGjr1DruYJVjB-yFrSM-FEuhbyOcs82PLLw/exec';
 
     function getApiKey() { return localStorage.getItem(LS_KEY) || ''; }
-    function getGasUrl() { return localStorage.getItem(LS_GAS_URL) || ''; }
 
     let allResults = [];
     let currentFilter = 'all';
     let lastSearchKeyword = '';
-    let skipDupCheck = false;
 
     // ============================================
     // API Key Modal
@@ -269,95 +221,6 @@
     if (!getApiKey()) { window.addEventListener('DOMContentLoaded', () => showApiKeyModal()); }
 
     // ============================================
-    // Spreadsheet Modal
-    // ============================================
-    function showSpreadsheetModal() {
-      document.getElementById('gasUrlInput').value = getGasUrl();
-      document.getElementById('spreadsheetModal').classList.remove('hidden');
-      document.getElementById('gasUrlInput').focus();
-    }
-    function closeSpreadsheetModal() { document.getElementById('spreadsheetModal').classList.add('hidden'); }
-    function saveGasUrl() {
-      const url = document.getElementById('gasUrlInput').value.trim();
-      if (url && !url.startsWith('https://script.google.com/')) {
-        alert('Google Apps Script のURLを入力してください');
-        return;
-      }
-      localStorage.setItem(LS_GAS_URL, url);
-      closeSpreadsheetModal();
-      showToast(url ? 'スプシ設定を保存しました' : 'スプシ設定をクリアしました');
-    }
-
-    // ============================================
-    // Search History
-    // ============================================
-    function getHistory() {
-      try { return JSON.parse(localStorage.getItem(LS_HISTORY) || '[]'); }
-      catch { return []; }
-    }
-    function saveHistory(entry) {
-      const history = getHistory();
-      history.unshift(entry);
-      // 最大100件保持
-      if (history.length > 100) history.length = 100;
-      localStorage.setItem(LS_HISTORY, JSON.stringify(history));
-    }
-    function clearHistory() {
-      if (!confirm('検索履歴をすべて削除しますか？')) return;
-      localStorage.setItem(LS_HISTORY, '[]');
-      renderHistory();
-      showToast('履歴を削除しました');
-    }
-    function showHistoryPanel() {
-      renderHistory();
-      document.getElementById('historyPanel').classList.remove('hidden');
-    }
-    function closeHistoryPanel() { document.getElementById('historyPanel').classList.add('hidden'); }
-    function closeHistoryIfBg(e) { if (e.target === e.currentTarget) closeHistoryPanel(); }
-
-    function renderHistory() {
-      const body = document.getElementById('historyBody');
-      const history = getHistory();
-      if (history.length === 0) {
-        body.innerHTML = '<p class="text-muted" style="padding:20px;text-align:center;">履歴がありません</p>';
-        return;
-      }
-      let html = '<table class="history-table"><thead><tr><th>日時</th><th>キーワード</th><th>媒体</th><th>件数</th><th>国</th></tr></thead><tbody>';
-      history.forEach(h => {
-        const dt = new Date(h.searchedAt);
-        const dtStr = dt.toLocaleDateString('ja-JP') + ' ' + dt.toLocaleTimeString('ja-JP', { hour: '2-digit', minute: '2-digit' });
-        const platforms = (h.platforms || []).map(p => p === 'meta' ? 'Meta' : 'Google').join(', ');
-        html += `<tr>
-          <td>${escapeHtml(dtStr)}</td>
-          <td><strong>${escapeHtml(h.keyword)}</strong></td>
-          <td>${escapeHtml(platforms)}</td>
-          <td>${h.resultCount ?? '—'}</td>
-          <td>${escapeHtml(h.country || '—')}</td>
-        </tr>`;
-      });
-      html += '</tbody></table>';
-      body.innerHTML = html;
-    }
-
-    function checkDuplicate(keyword, platforms) {
-      const history = getHistory();
-      const match = history.find(h =>
-        h.keyword === keyword &&
-        JSON.stringify(h.platforms.sort()) === JSON.stringify([...platforms].sort())
-      );
-      return match;
-    }
-
-    // ============================================
-    // Duplicate Warning
-    // ============================================
-    function dismissDupWarning() {
-      document.getElementById('dupWarning').classList.add('hidden');
-      skipDupCheck = true;
-      doSearch();
-    }
-
-    // ============================================
     // Search
     // ============================================
     async function doSearch() {
@@ -372,25 +235,9 @@
       if (document.getElementById('platformGoogle').checked) platforms.push('google');
       if (platforms.length === 0) { showError('Meta または Google を選択してください'); return; }
 
-      // 重複チェック
-      if (!skipDupCheck) {
-        const dup = checkDuplicate(keyword, platforms);
-        if (dup) {
-          const dt = new Date(dup.searchedAt);
-          const dtStr = dt.toLocaleDateString('ja-JP') + ' ' + dt.toLocaleTimeString('ja-JP', { hour: '2-digit', minute: '2-digit' });
-          document.getElementById('dupWarningText').textContent =
-            `⚠️「${keyword}」は ${dtStr} に同じ媒体で検索済みです（${dup.resultCount}件）。再検索するとクレジットを消費します。`;
-          document.getElementById('dupWarning').classList.remove('hidden');
-          return;
-        }
-      }
-      skipDupCheck = false;
-      document.getElementById('dupWarning').classList.add('hidden');
-
       const country = document.getElementById('country').value;
       const maxPages = parseInt(document.getElementById('maxPages').value);
 
-      // UI state
       document.getElementById('loading').classList.remove('hidden');
       document.getElementById('results').classList.add('hidden');
       document.getElementById('error').classList.add('hidden');
@@ -400,22 +247,11 @@
 
       try {
         let results = [];
-        if (platforms.includes('meta')) {
-          results = results.concat(await searchMeta(keyword, country, maxPages, apiKey));
-        }
-        if (platforms.includes('google')) {
-          results = results.concat(await searchGoogle(keyword, country, maxPages, apiKey));
-        }
+        if (platforms.includes('meta')) results = results.concat(await searchMeta(keyword, country, maxPages, apiKey));
+        if (platforms.includes('google')) results = results.concat(await searchGoogle(keyword, country, maxPages, apiKey));
 
         allResults = results;
         lastSearchKeyword = keyword;
-
-        // 検索履歴に保存
-        saveHistory({
-          keyword, platforms, country,
-          resultCount: results.length,
-          searchedAt: new Date().toISOString(),
-        });
 
         const domainCounts = {};
         results.forEach(r => { if (r.domain) domainCounts[r.domain] = (domainCounts[r.domain] || 0) + 1; });
@@ -427,6 +263,9 @@
         currentFilter = 'all';
         document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
         document.querySelector('[data-filter="all"]').classList.add('active');
+
+        // 自動でスプレッドシートに送信
+        autoSendToSheet(keyword, country, platforms, results);
       } catch (err) {
         showError('検索エラー: ' + err.message);
       } finally {
@@ -436,12 +275,44 @@
     }
 
     // ============================================
+    // Auto Send to Spreadsheet
+    // ============================================
+    async function autoSendToSheet(keyword, country, platforms, results) {
+      if (results.length === 0) return;
+      const statusEl = document.getElementById('sheetStatus');
+      statusEl.textContent = '📊 スプシ送信中...';
+      statusEl.className = 'sheet-status sending';
+
+      const now = new Date().toLocaleString('ja-JP');
+      try {
+        const payload = {
+          keyword, country, fetchedAt: now,
+          results: results.map(r => ({
+            fetchedAt: now, keyword, source: r.source,
+            advertiser: r.advertiser, publisher: r.publisher, domain: r.domain,
+            lp_url: r.lp_url, lp_url_clean: r.lp_url_clean,
+            title: r.title, cta_text: r.cta_text, ad_format: r.ad_format,
+            description: r.description, first_shown: r.first_shown,
+            last_shown: r.last_shown, details_link: r.details_link,
+          })),
+        };
+        await fetch(GAS_URL, { method: 'POST', mode: 'no-cors', headers: { 'Content-Type': 'text/plain' }, body: JSON.stringify(payload) });
+        statusEl.textContent = '✅ スプシに保存済み';
+        statusEl.className = 'sheet-status success';
+      } catch (err) {
+        statusEl.textContent = '⚠️ スプシ送信失敗';
+        statusEl.className = 'sheet-status error';
+        console.error('Sheet send error:', err);
+      }
+      setTimeout(() => { statusEl.textContent = ''; statusEl.className = 'sheet-status'; }, 5000);
+    }
+
+    // ============================================
     // Meta Ad Library
     // ============================================
     async function searchMeta(keyword, country, maxPages, apiKey) {
       const allAds = [];
       let nextPageToken = null;
-
       for (let page = 0; page < maxPages; page++) {
         const params = new URLSearchParams({
           engine: 'meta_ad_library', q: keyword, country, ad_type: 'all',
@@ -460,7 +331,6 @@
           if (page < maxPages - 1) await sleep(1000);
         } catch (e) { console.error('Meta search error:', e); break; }
       }
-
       const seenUrls = new Set();
       const results = [];
       for (const ad of allAds) {
@@ -470,14 +340,11 @@
         seenUrls.add(linkUrl);
         let domain = '', cleanUrl = linkUrl;
         try { const u = new URL(linkUrl); domain = u.hostname; cleanUrl = `${u.protocol}//${u.hostname}${u.pathname}`; } catch {}
-        const pageName = ad.page_name || snapshot.page_name || '';
         results.push({
-          source: 'Meta', advertiser: pageName, publisher: domain, domain,
-          lp_url: linkUrl, lp_url_clean: cleanUrl,
-          title: snapshot.title || '', cta_text: snapshot.cta_text || '',
+          source: 'Meta', advertiser: ad.page_name || snapshot.page_name || '', publisher: domain, domain,
+          lp_url: linkUrl, lp_url_clean: cleanUrl, title: snapshot.title || '', cta_text: snapshot.cta_text || '',
           ad_format: snapshot.display_format || '', description: snapshot.link_description || '',
-          first_shown: ad.ad_delivery_start_time || '', last_shown: ad.ad_delivery_stop_time || '',
-          details_link: '',
+          first_shown: ad.ad_delivery_start_time || '', last_shown: ad.ad_delivery_stop_time || '', details_link: '',
         });
       }
       return results;
@@ -505,44 +372,28 @@
       for (const domain of domainNames) {
         const creatives = await fetchGoogleCreatives(region, maxPages, apiKey, { domain });
         for (const c of creatives) {
-          const target = c.target_domain || '';
-          const adv = c.advertiser || {};
+          const target = c.target_domain || '', adv = c.advertiser || {};
           const lpUrl = target && !target.startsWith('http') ? `https://${target}` : target;
-          allResults.push({
-            source: 'Google', advertiser: adv.name || '', publisher: target, domain: target,
-            lp_url: lpUrl, lp_url_clean: lpUrl, title: '', cta_text: '',
-            ad_format: c.format || '', description: '',
-            first_shown: c.first_shown_datetime || '', last_shown: c.last_shown_datetime || '',
-            details_link: c.details_link || '',
-          });
+          allResults.push({ source: 'Google', advertiser: adv.name || '', publisher: target, domain: target,
+            lp_url: lpUrl, lp_url_clean: lpUrl, title: '', cta_text: '', ad_format: c.format || '', description: '',
+            first_shown: c.first_shown_datetime || '', last_shown: c.last_shown_datetime || '', details_link: c.details_link || '' });
         }
         await sleep(500);
       }
-
       for (const adv of advertisers) {
-        const advId = adv.id || '', advName = adv.name || '';
-        const creatives = await fetchGoogleCreatives(region, maxPages, apiKey, { advertiser_id: advId });
+        const creatives = await fetchGoogleCreatives(region, maxPages, apiKey, { advertiser_id: adv.id || '' });
         for (const c of creatives) {
-          const target = c.target_domain || '';
-          const cAdv = c.advertiser || {};
+          const target = c.target_domain || '', cAdv = c.advertiser || {};
           const lpUrl = target && !target.startsWith('http') ? `https://${target}` : (target || '');
-          allResults.push({
-            source: 'Google', advertiser: cAdv.name || advName, publisher: target || '(不明)',
-            domain: target || '(不明)', lp_url: lpUrl, lp_url_clean: lpUrl, title: '', cta_text: '',
-            ad_format: c.format || '', description: '',
-            first_shown: c.first_shown_datetime || '', last_shown: c.last_shown_datetime || '',
-            details_link: c.details_link || '',
-          });
+          allResults.push({ source: 'Google', advertiser: cAdv.name || adv.name || '', publisher: target || '(不明)',
+            domain: target || '(不明)', lp_url: lpUrl, lp_url_clean: lpUrl, title: '', cta_text: '', ad_format: c.format || '',
+            description: '', first_shown: c.first_shown_datetime || '', last_shown: c.last_shown_datetime || '',
+            details_link: c.details_link || '' });
         }
         await sleep(500);
       }
-
       const seen = new Set();
-      return allResults.filter(r => {
-        const key = r.domain;
-        if (!key || seen.has(key)) return !!key ? false : true;
-        seen.add(key); return true;
-      });
+      return allResults.filter(r => { const key = r.domain; if (!key || seen.has(key)) return !!key ? false : true; seen.add(key); return true; });
     }
 
     async function fetchGoogleCreatives(region, maxPages, apiKey, opts = {}) {
@@ -561,8 +412,7 @@
           const creatives = data.ad_creatives || [];
           if (creatives.length === 0) break;
           allCreatives.push(...creatives);
-          const pagination = data.pagination || {};
-          nextPageToken = pagination.next_page_token;
+          nextPageToken = (data.pagination || {}).next_page_token;
           if (!nextPageToken) break;
           if (page < maxPages - 1) await sleep(1000);
         } catch (e) { console.error('Google creatives error:', e); break; }
@@ -576,27 +426,17 @@
     function renderResults(results) {
       const tbody = document.getElementById('resultBody');
       tbody.innerHTML = '';
-      if (results.length === 0) {
-        tbody.innerHTML = '<tr><td colspan="8" class="empty-msg">結果がありません</td></tr>';
-        return;
-      }
+      if (results.length === 0) { tbody.innerHTML = '<tr><td colspan="8" class="empty-msg">結果がありません</td></tr>'; return; }
       results.forEach(r => {
         const tr = document.createElement('tr');
-        const badge = r.source === 'Meta'
-          ? '<span class="badge badge-meta">Meta</span>'
-          : '<span class="badge badge-google">Google</span>';
+        const badge = r.source === 'Meta' ? '<span class="badge badge-meta">Meta</span>' : '<span class="badge badge-google">Google</span>';
         const urlDisplay = r.lp_url
           ? `<a href="${escapeHtml(r.lp_url)}" target="_blank" rel="noopener" title="${escapeHtml(r.lp_url)}">${escapeHtml(truncate(r.lp_url_clean || r.lp_url, 50))}</a>`
           : '<span class="text-muted">—</span>';
         const titleCta = [r.title, r.cta_text].filter(Boolean).join(' / ') || '—';
-        let detailsIcon = '';
-        if (r.details_link) detailsIcon = ` <a href="${escapeHtml(r.details_link)}" target="_blank" class="details-link" title="広告詳細">↗</a>`;
+        let detailsIcon = r.details_link ? ` <a href="${escapeHtml(r.details_link)}" target="_blank" class="details-link" title="広告詳細">↗</a>` : '';
         let periodDisplay = '—';
-        if (r.first_shown || r.last_shown) {
-          const start = r.first_shown ? formatDate(r.first_shown) : '不明';
-          const end = r.last_shown ? formatDate(r.last_shown) : '配信中';
-          periodDisplay = `${start} ～ ${end}`;
-        }
+        if (r.first_shown || r.last_shown) { periodDisplay = `${r.first_shown ? formatDate(r.first_shown) : '不明'} ～ ${r.last_shown ? formatDate(r.last_shown) : '配信中'}`; }
         tr.innerHTML = `
           <td>${badge}</td>
           <td class="cell-advertiser">${escapeHtml(r.advertiser || '—')}</td>
@@ -605,8 +445,7 @@
           <td class="cell-url">${urlDisplay}${detailsIcon}</td>
           <td><span class="format-tag">${escapeHtml(r.ad_format || '—')}</span></td>
           <td class="cell-title">${escapeHtml(truncate(titleCta, 40))}</td>
-          <td class="cell-period">${periodDisplay}</td>
-        `;
+          <td class="cell-period">${periodDisplay}</td>`;
         tbody.appendChild(tr);
       });
     }
@@ -622,100 +461,36 @@
       currentFilter = filter;
       document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
       btn.classList.add('active');
-      const filtered = filter === 'all' ? allResults : allResults.filter(r => r.source === filter);
-      renderResults(filtered);
+      renderResults(filter === 'all' ? allResults : allResults.filter(r => r.source === filter));
     }
 
     // ============================================
-    // Spreadsheet Export
-    // ============================================
-    async function sendToSpreadsheet() {
-      const gasUrl = getGasUrl();
-      if (!gasUrl) { showSpreadsheetModal(); return; }
-
-      const data = currentFilter === 'all' ? allResults : allResults.filter(r => r.source === currentFilter);
-      if (data.length === 0) { showToast('送信するデータがありません', true); return; }
-
-      const btn = document.getElementById('btnSpreadsheet');
-      btn.disabled = true;
-      btn.textContent = '送信中...';
-
-      const keyword = document.getElementById('keyword').value.trim() || '';
-      const now = new Date().toLocaleString('ja-JP');
-
-      try {
-        const payload = {
-          keyword,
-          fetchedAt: now,
-          results: data.map(r => ({
-            fetchedAt: now,
-            keyword,
-            source: r.source,
-            advertiser: r.advertiser,
-            publisher: r.publisher,
-            domain: r.domain,
-            lp_url: r.lp_url,
-            lp_url_clean: r.lp_url_clean,
-            title: r.title,
-            cta_text: r.cta_text,
-            ad_format: r.ad_format,
-            description: r.description,
-            first_shown: r.first_shown,
-            last_shown: r.last_shown,
-            details_link: r.details_link,
-          })),
-        };
-
-        const resp = await fetch(gasUrl, {
-          method: 'POST',
-          mode: 'no-cors',
-          headers: { 'Content-Type': 'text/plain' },
-          body: JSON.stringify(payload),
-        });
-
-        showToast(`✅ ${data.length}件をスプレッドシートに送信しました`);
-      } catch (err) {
-        showToast('❌ 送信エラー: ' + err.message, true);
-      } finally {
-        btn.disabled = false;
-        btn.innerHTML = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 9h18M3 15h18M9 3v18"/></svg> スプシに送信';
-      }
-    }
-
-    // ============================================
-    // CSV Export (Client-Side)
+    // CSV Export
     // ============================================
     function exportCSV() {
       const data = currentFilter === 'all' ? allResults : allResults.filter(r => r.source === currentFilter);
       if (data.length === 0) return;
-
       const now = new Date().toLocaleString('ja-JP');
       const headers = ['取得日時', '検索キーワード', '媒体', '広告主', '出稿元', 'ドメイン', 'LP URL', 'LP URL（クリーン）',
                        'タイトル', 'CTA', '形式', '説明', '広告開始日', '広告終了日', '詳細リンク'];
-
-      let csv = '\uFEFF';
-      csv += headers.map(h => `"${h}"`).join(',') + '\n';
+      let csv = '\uFEFF' + headers.map(h => `"${h}"`).join(',') + '\n';
       data.forEach(row => {
         const vals = [now, lastSearchKeyword, row.source, row.advertiser, row.publisher, row.domain,
           row.lp_url, row.lp_url_clean, row.title, row.cta_text, row.ad_format,
           row.description, row.first_shown, row.last_shown, row.details_link];
         csv += vals.map(v => `"${(v || '').toString().replace(/"/g, '""')}"`).join(',') + '\n';
       });
-
       const blob = new Blob([csv], { type: 'text/csv;charset=utf-8' });
       const url = URL.createObjectURL(blob);
       const keyword = document.getElementById('keyword').value.trim() || 'lp_urls';
-      const filterLabel = currentFilter !== 'all' ? `_${currentFilter}` : '';
-      const dateStr = new Date().toISOString().slice(0, 10);
-      const filename = `${keyword.replace(/[ /]/g, '_')}${filterLabel}_${dateStr}.csv`;
-      const a = document.createElement('a');
-      a.href = url; a.download = filename;
+      const filename = `${keyword.replace(/[ /]/g, '_')}${currentFilter !== 'all' ? '_' + currentFilter : ''}_${new Date().toISOString().slice(0, 10)}.csv`;
+      const a = document.createElement('a'); a.href = url; a.download = filename;
       document.body.appendChild(a); a.click();
       setTimeout(() => { document.body.removeChild(a); URL.revokeObjectURL(url); }, 100);
     }
 
     // ============================================
-    // Toast Notification
+    // Toast & Utilities
     // ============================================
     function showToast(msg, isError = false) {
       const toast = document.getElementById('toast');
@@ -724,14 +499,7 @@
       toast.classList.remove('hidden');
       setTimeout(() => toast.classList.add('hidden'), 3500);
     }
-
-    // ============================================
-    // Utilities
-    // ============================================
-    function showError(msg) {
-      document.getElementById('errorText').textContent = msg;
-      document.getElementById('error').classList.remove('hidden');
-    }
+    function showError(msg) { document.getElementById('errorText').textContent = msg; document.getElementById('error').classList.remove('hidden'); }
     function escapeHtml(str) { const d = document.createElement('div'); d.textContent = str; return d.innerHTML; }
     function truncate(str, len) { return str && str.length > len ? str.slice(0, len) + '…' : (str || ''); }
     function formatDate(dateStr) {
