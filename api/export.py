@@ -34,11 +34,11 @@ class handler(BaseHTTPRequestHandler):
                        "title", "cta_text", "ad_format", "description",
                        "first_shown", "last_shown", "details_link"]
         header_labels = {
-            "source": "媒体", "advertiser": "広告主", "domain": "ドメイン",
+            "source": "媒体", "advertiser": "広告主/会社名", "domain": "ドメイン",
             "lp_url": "LP URL", "lp_url_clean": "LP URL（クリーン）",
             "title": "タイトル", "cta_text": "CTA", "ad_format": "形式",
-            "description": "説明", "first_shown": "初回表示",
-            "last_shown": "最終表示", "details_link": "詳細リンク",
+            "description": "説明", "first_shown": "広告開始日",
+            "last_shown": "広告終了日", "details_link": "詳細リンク",
         }
 
         text_wrapper = io.TextIOWrapper(output, encoding='utf-8', newline='')

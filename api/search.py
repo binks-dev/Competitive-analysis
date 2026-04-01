@@ -83,6 +83,8 @@ def search_meta(keyword, country, max_pages):
             "cta_text": snapshot.get("cta_text", ""),
             "ad_format": snapshot.get("display_format", ""),
             "description": snapshot.get("link_description", ""),
+            "first_shown": ad.get("ad_delivery_start_time", ""),
+            "last_shown": ad.get("ad_delivery_stop_time", ""),
         })
 
     return results

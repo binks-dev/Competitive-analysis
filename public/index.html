@@ -132,11 +132,12 @@
             <thead>
               <tr>
                 <th class="col-source">媒体</th>
-                <th class="col-advertiser">広告主</th>
+                <th class="col-advertiser">広告主/会社名</th>
                 <th class="col-domain">ドメイン</th>
                 <th class="col-url">LP URL</th>
                 <th class="col-format">形式</th>
                 <th class="col-title">タイトル / CTA</th>
+                <th class="col-period">広告出稿期間</th>
               </tr>
             </thead>
             <tbody id="resultBody"></tbody>
@@ -219,7 +220,7 @@
       tbody.innerHTML = '';
 
       if (results.length === 0) {
-        tbody.innerHTML = '<tr><td colspan="6" class="empty-msg">結果がありません</td></tr>';
+        tbody.innerHTML = '<tr><td colspan="7" class="empty-msg">結果がありません</td></tr>';
         return;
       }
 
@@ -241,6 +242,14 @@
           detailsIcon = ` <a href="${escapeHtml(r.details_link)}" target="_blank" class="details-link" title="広告詳細">↗</a>`;
         }
 
+        // 広告出稿期間の表示
+        let periodDisplay = '—';
+        if (r.first_shown || r.last_shown) {
+          const start = r.first_shown ? formatDate(r.first_shown) : '不明';
+          const end = r.last_shown ? formatDate(r.last_shown) : '配信中';
+          periodDisplay = `${start} ～ ${end}`;
+        }
+
         tr.innerHTML = `
           <td>${badge}</td>
           <td class="cell-advertiser">${escapeHtml(r.advertiser || '—')}</td>
@@ -248,6 +257,7 @@
           <td class="cell-url">${urlDisplay}${detailsIcon}</td>
           <td><span class="format-tag">${escapeHtml(r.ad_format || '—')}</span></td>
           <td class="cell-title">${escapeHtml(truncate(titleCta, 40))}</td>
+          <td class="cell-period">${periodDisplay}</td>
         `;
         tbody.appendChild(tr);
       });
@@ -340,6 +350,17 @@
 
     function truncate(str, len) {
       return str && str.length > len ? str.slice(0, len) + '…' : (str || '');
+    }
+
+    function formatDate(dateStr) {
+      if (!dateStr) return '';
+      try {
+        const d = new Date(dateStr);
+        if (isNaN(d.getTime())) return dateStr.slice(0, 10);
+        return d.toLocaleDateString('ja-JP', { year: 'numeric', month: '2-digit', day: '2-digit' });
+      } catch {
+        return dateStr.slice(0, 10);
+      }
     }
 
     // Enter key to search

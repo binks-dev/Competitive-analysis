@@ -52,7 +52,7 @@ a:hover { text-decoration: underline; }
   padding: 28px 0 24px;
 }
 .header-inner {
-  max-width: 1200px;
+  max-width: 1400px;
   margin: 0 auto;
   padding: 0 24px;
 }
@@ -88,7 +88,7 @@ a:hover { text-decoration: underline; }
 
 /* ---- Main ---- */
 .main {
-  max-width: 1200px;
+  max-width: 1400px;
   margin: 0 auto;
   padding: 28px 24px 60px;
 }
@@ -370,6 +370,7 @@ tbody tr:last-child td {
 .col-url { min-width: 200px; }
 .col-format { width: 70px; }
 .col-title { width: 180px; }
+.col-period { width: 180px; }
 
 .cell-advertiser {
   font-weight: 500;
@@ -394,6 +395,11 @@ tbody tr:last-child td {
   max-width: 180px;
   overflow: hidden;
   text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.cell-period {
+  font-size: 11px;
+  color: var(--text-secondary);
   white-space: nowrap;
 }
 
